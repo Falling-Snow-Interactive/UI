@@ -4,67 +4,106 @@ using UnityEngine;
 
 namespace Fsi.Ui.Menu
 {
-	public class FsiMenu<T> : MonoBehaviour
+	public class FsiMenu<T> : MonoBehaviour // MbSingleton<FsiMenu<T>>
 		where T : Enum
 	{
-		[Header("Fsi Menu")]
-		[SerializeField]
-		private bool openOnStart = true;
-
-		[Header("Pages")]
-		[SerializeField]
-		private List<FsiPage<T>> pages = new();
-
-		[Header("References")]
-		[SerializeField]
-		private GameObject root;
-
-		private Dictionary<T, FsiPage<T>> cache;
+		private Stack<T> pageStack = new();
 		private FsiPage<T> currentPage;
-		public FsiPage<T> CurrentPage => currentPage;
-
+		
+		private Dictionary<T, FsiPage<T>> _pages;
 		private Dictionary<T, FsiPage<T>> Pages
 		{
 			get
 			{
-				cache ??= BuildDictionary();
-				return cache;
+				_pages ??= BuildDictionary();
+				return _pages;
 			}
 		}
+		
+		[Header("Pages")]
 
+		[SerializeField]
+		private T startPage;
+		
+		[SerializeField]
+		private List<FsiPage<T>> pages = new();
+
+		// protected override void Awake()
+		// {
+		// 	base.Awake();
+		// 	foreach (FsiPage<T> page in Pages.Values)
+		// 	{
+		// 		page.gameObject.SetActive(false);
+		// 	}
+		// }
+		
 		private void Awake()
 		{
-			foreach (FsiPage<T> page in pages)
+			foreach (FsiPage<T> page in Pages.Values)
 			{
-				page.gameObject.SetActive(true);
-				page.Close();
+				page.gameObject.SetActive(false);
 			}
 		}
 
 		protected virtual void Start()
 		{
-			foreach (FsiPage<T> page in pages) page?.Initialize(this);
-
-			if (openOnStart) Open();
+			GoToPage(startPage, null);
 		}
 
-		public virtual void Open()
+		private void CloseCurrentPage(Action onComplete)
 		{
-			root?.SetActive(true);
-			GoToPage(default);
+			if (currentPage)
+			{
+				if (currentPage.ID.Equals(pageStack.Peek()))
+				{
+					pageStack.Pop();
+				}
+
+				currentPage.Close(onComplete);
+			}
+			else
+			{
+				onComplete?.Invoke();
+			}
 		}
 
-		public virtual void Close()
+		public void GoToPage(FsiPage<T> to, Action onComplete = null)
 		{
-			root?.SetActive(false);
+			CloseCurrentPage(() =>
+			                 {
+				                 currentPage = to;
+				                 
+				                 pageStack.Push(currentPage.ID);
+				                 currentPage.gameObject.SetActive(true);
+				                 currentPage.Open(onComplete);
+			                 });
 		}
 
-		public void GoToPage(T to)
+		// public void GoToPage(T to)
+		// {
+		// 	
+		// }
+
+		public void GoToPage(T to, Action onComplete = null)
 		{
-			CurrentPage?.Close();
-			if (!Pages.TryGetValue(to, out currentPage))
-				Debug.Log($"Menu ({name}) could not find page of type {to}.", gameObject);
-			CurrentPage?.Open();
+			Debug.Log($"Go to page {to}");
+			if (!Pages.TryGetValue(to, out FsiPage<T> nextPage))
+			{
+				Debug.LogError($"Menu ({name}) could not find page of type {to}.", gameObject);
+				return;
+			}
+			
+			CloseCurrentPage(() =>
+			                 {
+				                 currentPage = nextPage;
+				                 pageStack.Push(nextPage.ID);
+				                 currentPage.gameObject.SetActive(true);
+				                 currentPage.Open(() =>
+				                                  {
+					                                  Debug.Log("Current page opened.");
+					                                  onComplete?.Invoke();
+				                                  });
+			                 });
 		}
 
 		private Dictionary<T, FsiPage<T>> BuildDictionary()
@@ -75,8 +114,8 @@ namespace Fsi.Ui.Menu
 			for (int i = 0; i < pages.Count; i++)
 			{
 				FsiPage<T> page = pages[i];
-				dict.Add(page.Page, page);
-				s += $"Adding Page {page.Page}";
+				dict.Add(page.ID, page);
+				s += $"Adding Page {page.ID}";
 				if (i < pages.Count - 1) s += "\n";
 			}
 
