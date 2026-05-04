@@ -1,13 +1,13 @@
 using System;
 using System.Collections.Generic;
+using Fsi.General;
 using UnityEngine;
 
 namespace Fsi.Ui.Menu
 {
-	public class FsiMenu<T> : MonoBehaviour // MbSingleton<FsiMenu<T>>
-		where T : Enum
+	public class FsiMenu<T> : MbSingleton<FsiMenu<T>>
 	{
-		private Stack<T> pageStack = new();
+		private readonly Stack<T> pageStack = new();
 		private FsiPage<T> currentPage;
 		
 		private Dictionary<T, FsiPage<T>> _pages;
@@ -37,10 +37,12 @@ namespace Fsi.Ui.Menu
 		// 	}
 		// }
 		
-		private void Awake()
+		protected override void Awake()
 		{
+			base.Awake();
 			foreach (FsiPage<T> page in Pages.Values)
 			{
+				page.Initialize(this);
 				page.gameObject.SetActive(false);
 			}
 		}

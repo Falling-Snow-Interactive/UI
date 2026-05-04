@@ -6,16 +6,16 @@ using UnityEngine.EventSystems;
 namespace Fsi.Ui.Menu
 {
 	public abstract class FsiPage<T> : MonoBehaviour
-		where T : Enum
+		// where T : Enum
 	{
+		public FsiMenu<T> Menu { get; private set; }
+		
 		private const float MaxAnimTime = 2f;
 
 		public event Action Opened;
 		public event Action Closed;
 		
-		[SerializeField]
-		private T id;
-		public T ID => id;
+		public abstract T ID { get; }
 
 		[Header("Animation")]
 
@@ -38,6 +38,11 @@ namespace Fsi.Ui.Menu
 		// State properties
 		public bool IsOpen => gameObject.activeSelf;
 		public bool IsActive { get; private set; }
+
+		public void Initialize(FsiMenu<T> menu)
+		{
+			Menu = menu;
+		}
 		
 		#region Open
 
