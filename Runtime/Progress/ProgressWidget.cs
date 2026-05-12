@@ -35,13 +35,26 @@ namespace Fsi.Ui.Progress
                 {
                     if (fillImg.transform is RectTransform fillRect)
                     {
-                        fillRect.anchorMax = new Vector2(Normalized, 1);
+                        Vector2 anchorMax = fillRect.anchorMax;
+                        anchorMax.x = Normalized;
+                        fillRect.anchorMax = anchorMax;
                     }
                 }
             }
         }
 
-        public float Normalized => (value - min) / (max - min);
+        public float Normalized
+        {
+            get
+            {
+                if (Mathf.Approximately(value - min, 0) || Mathf.Approximately(max - min, 0))
+                {
+                    return 0;
+                }
+
+                return (value - min) / (max - min);
+            }
+        }
         
         // References
 
